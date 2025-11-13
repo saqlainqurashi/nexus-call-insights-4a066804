@@ -55,11 +55,32 @@ serve(async (req) => {
       );
     }
 
+    // Map client_id to user_id via profiles table
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('user_id')
+      .eq('client_id', client_id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile lookup error:', profileError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Client not found', 
+          details: `No profile found for client_id: ${client_id}` 
+        }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     // Insert call data
     const { data, error } = await supabaseClient
       .from('calls')
       .insert({
-        user_id: client_id,
+        user_id: profile.user_id,
         call_summary,
         transcript,
         recording_url,
